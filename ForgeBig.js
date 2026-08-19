@@ -1,8 +1,6 @@
 /* ============================================================
-   COOKIE FORGE BIG 5.0
-   Game.LoadMod-compatible arbitrary magnitude engine.
-   Exposes window.ForgeBig immediately and also registers the
-   Cookie Clicker mod lifecycle when available.
+   COOKIE FORGE BIG 6.0
+   Immediate + Game.LoadMod-compatible arbitrary magnitude engine.
    ============================================================ */
 
 (() => {
@@ -56,26 +54,19 @@
             );
 
             if (!match) {
-                throw new TypeError(
-                    `ForgeBig: invalid number: ${value}`
-                );
+                throw new TypeError(`ForgeBig: invalid number: ${value}`);
             }
 
             const whole = match[2] || '';
             const fraction =
-                match[3] !== undefined
-                    ? match[3]
-                    : match[4] || '';
+                match[3] !== undefined ? match[3] : match[4] || '';
 
             const digits =
-                (whole + fraction)
-                    .replace(/^0+(?=\d)/, '') || '0';
+                (whole + fraction).replace(/^0+(?=\d)/, '') || '0';
 
             this.s = match[1] === '-' ? -1 : 1;
             this.c = BigInt(digits);
-            this.e =
-                BigInt(match[5] || '0') -
-                BigInt(fraction.length);
+            this.e = BigInt(match[5] || '0') - BigInt(fraction.length);
 
             return this.normalize();
         }
@@ -115,19 +106,9 @@
             if (this.isZero()) return other.clone();
             if (other.isZero()) return this.clone();
 
-            const exponent =
-                this.e < other.e ? this.e : other.e;
-
-            const a =
-                BigInt(this.s) *
-                this.c *
-                10n ** (this.e - exponent);
-
-            const b =
-                BigInt(other.s) *
-                other.c *
-                10n ** (other.e - exponent);
-
+            const exponent = this.e < other.e ? this.e : other.e;
+            const a = BigInt(this.s) * this.c * 10n ** (this.e - exponent);
+            const b = BigInt(other.s) * other.c * 10n ** (other.e - exponent);
             const value = a + b;
 
             if (value === 0n) return new BigDecimal(0);
@@ -136,7 +117,6 @@
             result.s = value < 0n ? -1 : 1;
             result.c = value < 0n ? -value : value;
             result.e = exponent;
-
             return result.normalize();
         }
 
@@ -146,12 +126,10 @@
 
         mul(other) {
             other = new BigDecimal(other);
-
             const result = new BigDecimal(0);
             result.s = this.s * other.s;
             result.c = this.c * other.c;
             result.e = this.e + other.e;
-
             return result.normalize();
         }
 
@@ -164,13 +142,9 @@
 
             const scale = BigInt(precision);
             const result = new BigDecimal(0);
-
             result.s = this.s * other.s;
-            result.c =
-                (this.c * 10n ** scale) / other.c;
-            result.e =
-                this.e - other.e - scale;
-
+            result.c = (this.c * 10n ** scale) / other.c;
+            result.e = this.e - other.e - scale;
             return result.normalize();
         }
 
@@ -178,19 +152,12 @@
             if (this.c === 0n) return '0e+0';
 
             const digits = this.c.toString();
-            const exponent =
-                this.e + BigInt(digits.length - 1);
-
-            const count = Math.max(
-                1,
-                Math.min(significant, digits.length)
-            );
+            const exponent = this.e + BigInt(digits.length - 1);
+            const count = Math.max(1, Math.min(significant, digits.length));
 
             let mantissa = digits.slice(0, count);
-
             if (count > 1) {
-                mantissa =
-                    mantissa[0] + '.' + mantissa.slice(1);
+                mantissa = mantissa[0] + '.' + mantissa.slice(1);
             }
 
             return (
@@ -203,20 +170,14 @@
         }
 
         nativeValue() {
-            const exponent =
-                this.e +
-                BigInt(this.c.toString().length - 1);
+            const exponent = this.e + BigInt(this.c.toString().length - 1);
 
             if (exponent > 308n) {
-                return this.s < 0
-                    ? -Number.MAX_VALUE
-                    : Number.MAX_VALUE;
+                return this.s < 0 ? -Number.MAX_VALUE : Number.MAX_VALUE;
             }
 
             const value =
-                Number(this.s) *
-                Number(this.c) *
-                10 ** Number(this.e);
+                Number(this.s) * Number(this.c) * 10 ** Number(this.e);
 
             return Number.isFinite(value)
                 ? value
@@ -226,10 +187,7 @@
         }
 
         fitsNative() {
-            const exponent =
-                this.e +
-                BigInt(this.c.toString().length - 1);
-
+            const exponent = this.e + BigInt(this.c.toString().length - 1);
             return exponent <= 308n;
         }
 
@@ -238,21 +196,17 @@
         }
 
         toJSON() {
-            return this.scientific(18);
+            return this.toString();
         }
     }
 
     function beautify(value, places = 12) {
         if (value instanceof BigDecimal) {
-            if (
-                value.fitsNative() &&
-                typeof window.Beautify === 'function'
-            ) {
+            if (value.fitsNative() && typeof window.Beautify === 'function') {
                 try {
                     return window.Beautify(value.nativeValue());
                 } catch {}
             }
-
             return value.scientific(places);
         }
 
@@ -267,7 +221,7 @@
     }
 
     const ForgeBig = {
-        version: '5.0.0',
+        version: '6.0.0',
         engine: 'BigInt coefficient + BigInt exponent',
         Decimal: BigDecimal,
         booted: false,
@@ -277,23 +231,13 @@
         add: (a, b) => new BigDecimal(a).add(b),
         sub: (a, b) => new BigDecimal(a).sub(b),
         mul: (a, b) => new BigDecimal(a).mul(b),
-        div: (a, b, precision = 40) =>
-            new BigDecimal(a).div(b, precision),
-
+        div: (a, b, precision = 40) => new BigDecimal(a).div(b, precision),
         format: beautify,
         beautify,
-
-        scientific: (value, places = 18) =>
-            new BigDecimal(value).scientific(places),
-
-        exact: value =>
-            new BigDecimal(value).toString(),
-
-        native: value =>
-            new BigDecimal(value).nativeValue(),
-
-        fitsNative: value =>
-            new BigDecimal(value).fitsNative(),
+        scientific: (value, places = 18) => new BigDecimal(value).scientific(places),
+        exact: value => new BigDecimal(value).toString(),
+        native: value => new BigDecimal(value).nativeValue(),
+        fitsNative: value => new BigDecimal(value).fitsNative(),
 
         compare(a, b) {
             const x = new BigDecimal(a);
@@ -301,24 +245,16 @@
 
             if (x.s !== y.s) return x.s > y.s ? 1 : -1;
 
-            const ax =
-                x.e + BigInt(x.c.toString().length - 1);
-            const ay =
-                y.e + BigInt(y.c.toString().length - 1);
+            const ax = x.e + BigInt(x.c.toString().length - 1);
+            const ay = y.e + BigInt(y.c.toString().length - 1);
 
-            if (ax !== ay) {
-                return x.s * (ax > ay ? 1 : -1);
-            }
+            if (ax !== ay) return x.s * (ax > ay ? 1 : -1);
 
-            const exponent =
-                x.e < y.e ? x.e : y.e;
-
+            const exponent = x.e < y.e ? x.e : y.e;
             const av = x.c * 10n ** (x.e - exponent);
             const bv = y.c * 10n ** (y.e - exponent);
 
-            return x.s * (
-                av > bv ? 1 : av < bv ? -1 : 0
-            );
+            return x.s * (av > bv ? 1 : av < bv ? -1 : 0);
         },
 
         test() {
@@ -342,47 +278,55 @@
         }
     };
 
-    // IMPORTANT: expose it immediately.
-    // Game.LoadMod() is asynchronous, so users can inspect this
-    // object as soon as the remote script executes.
+    /* ------------------------------------------------------------
+       CRITICAL: expose + boot IMMEDIATELY.
+       Do not wait for Game.LoadMod's mod callback.
+       ------------------------------------------------------------ */
+
     window.ForgeBig = ForgeBig;
 
     function boot() {
+        if (ForgeBig.booted) return;
         ForgeBig.booted = true;
 
         if (window.CookieForge) {
             window.CookieForge.big = ForgeBig;
-            window.CookieForge.features =
-                window.CookieForge.features || {};
+            window.CookieForge.features = window.CookieForge.features || {};
             window.CookieForge.features.forgeBig = true;
             window.CookieForge.features.arbitraryMagnitude = true;
         }
 
         console.log(
-            '[Cookie Forge Big] Loaded:',
+            '%c[Cookie Forge Big] ONLINE',
+            'color:#ff69b4;font-weight:bold;font-size:14px',
             ForgeBig.test()
         );
 
-        if (typeof Game !== 'undefined' &&
-            typeof Game.Notify === 'function') {
-            Game.Notify(
-                'COOKIE FORGE BIG',
-                'Arbitrary-magnitude number engine online.',
-                [16, 5]
-            );
+        if (typeof Game !== 'undefined' && typeof Game.Notify === 'function') {
+            try {
+                Game.Notify(
+                    'COOKIE FORGE BIG',
+                    'Arbitrary-magnitude number engine online.',
+                    [16, 5]
+                );
+            } catch {}
         }
     }
 
-    // Register with Cookie Clicker's mod loader when available.
+    /* Boot now. */
+    boot();
+
+    /* Also register with Cookie Clicker for proper mod awareness. */
     if (
         typeof Game !== 'undefined' &&
         typeof Game.registerMod === 'function'
     ) {
-        Game.registerMod(MOD_ID, {
-            init: boot
-        });
-    } else {
-        // Fallback for direct execution / unusual CC builds.
-        boot();
+        try {
+            Game.registerMod(MOD_ID, {
+                init: boot
+            });
+        } catch (error) {
+            console.warn('[Cookie Forge Big] registerMod failed:', error);
+        }
     }
 })();
