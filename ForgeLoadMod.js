@@ -5,11 +5,20 @@
    FORGE-GUI — MOD LOAD
    One-paste loader for the complete Forge stack.
 
-   Loads in order: Forge.js -> ForgeBig.js -> ForgeBigMod.js -> ForgeGUI.js
+   Loads in order:
+   Forge.js -> ForgeBig.js -> ForgeBigMod.js -> ForgeGUI.js
+   -> ForgeBigCookies.js
    ============================================================ */
 
 const BASE = 'https://raw.githubusercontent.com/Oddossosososo/ai-test/main/';
-const files = ['Forge.js', 'ForgeBig.js', 'ForgeBigMod.js', 'ForgeGUI.js'];
+const files = [
+    'Forge.js',
+    'ForgeBig.js',
+    'ForgeBigMod.js',
+    'ForgeGUI.js',
+    'ForgeBigCookies.js'
+];
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function loadScript(name) {
@@ -51,6 +60,7 @@ async function loadScript(name) {
             version: window.CookieForge.version,
             big: !!window.ForgeBig,
             bigMode: !!window.ForgeBigMode,
+            bigCookies: !!window.ForgeBigCookies,
             gui: !!document.querySelector('#FGUI_MINIMIZE')
         };
 
@@ -58,7 +68,9 @@ async function loadScript(name) {
         console.log('[Forge-GUI] Version:', window.CookieForge.version);
         console.log('[Forge-GUI] Big engine:', !!window.ForgeBig);
         console.log('[Forge-GUI] Big mode:', !!window.ForgeBigMode);
+        console.log('[Forge-GUI] Big cookies:', !!window.ForgeBigCookies);
         console.log('[Forge-GUI] Minimize: M | Big Mode: F8');
+        console.log('[Forge-GUI] Set Cookies now accepts 1e309+ values.');
     } catch (error) {
         console.error('[Forge-GUI] LOAD FAILED:', error);
         window.ForgeModLoad = { ready: false, error: String(error) };
