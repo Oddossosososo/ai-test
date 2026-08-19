@@ -1,0 +1,12 @@
+{
+  "Name": "Cookie Forge",
+  "ID": "CookieForge",
+  "Author": "Oddossosososo",
+  "Description": "Cookie Forge holographic control system for Cookie Clicker.",
+  "ModVersion": 4.0,
+  "GameVersion": 2.052,
+  "Date": "08/19/2026",
+  "Dependencies": [],
+  "Disabled": 0,
+  "AllowSteamAchievs": 0
+}
