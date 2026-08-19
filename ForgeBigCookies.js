@@ -1,18 +1,7 @@
 (() => {
 'use strict';
 
-/* ============================================================
-   COOKIE FORGE — BIG COOKIE BRIDGE 1.0.0
-
-   Lets Forge's SET COOKIES accept values above JS Number's
-   1e+308 limit without feeding Infinity/NaN into Cookie Clicker.
-
-   The exact huge balance lives in ForgeBig (BigInt-backed).
-   Cookie Clicker receives Number.MAX_VALUE as the spendable
-   native balance, which keeps its normal Number-based engine
-   stable while Forge displays the exact huge balance.
-   ============================================================ */
-
+/* COOKIE FORGE — BIG COOKIE BRIDGE 2.0 */
 const CF = window.CookieForge;
 const Big = window.ForgeBig;
 const Game = window.Game;
@@ -23,12 +12,20 @@ if (!CF || !Big || !Game) {
 }
 
 const KEY = 'CookieForgeBigCookies';
-const MAX = Number.MAX_VALUE;
 const state = CF.bigCookies = CF.bigCookies || {
-    version: '1.0.0',
-    active: true,
-    virtual: null
+    version: '2.0.0', active: true, virtual: null
 };
+
+function parse(value) {
+    if (value instanceof Big.Decimal) return value.clone();
+    const text = String(value ?? '').trim().replace(/,/g, '');
+    if (!text) throw new TypeError('Empty cookie amount');
+    return Big.d(text);
+}
+
+function save(value) {
+    try { localStorage.setItem(KEY, value.sci(24)); } catch {}
+}
 
 function readSaved() {
     try {
@@ -37,36 +34,21 @@ function readSaved() {
     } catch {}
 }
 
-function save(value) {
-    try {
-        localStorage.setItem(KEY, value.sci(24));
-    } catch {}
-}
-
-function parse(value) {
-    if (value instanceof Big.Decimal) return value;
-    const text = String(value ?? '').trim().replace(/,/g, '');
-    if (!text) throw new TypeError('Empty cookie amount');
-    return Big.d(text);
-}
-
+/* ONLY this function crosses into Cookie Clicker's Number-based engine. */
 function nativeValue(big) {
-    const n = big.valueOf();
-    if (!Number.isFinite(n) || n > MAX) return MAX;
-    if (n < 0) return 0;
-    return n;
+    const n = Big.native ? Big.native(big) : big.nativeValue();
+    if (!Number.isFinite(n)) return Number.MAX_VALUE;
+    return n < 0 ? 0 : n;
 }
 
 function apply(big, announce = true) {
     state.virtual = big.clone();
     save(state.virtual);
 
-    const n = nativeValue(big);
-
     try {
-        Game.cookies = n;
+        Game.cookies = nativeValue(big);
         if (typeof Game.cookiesEarned === 'number') {
-            Game.cookiesEarned = Math.max(Game.cookiesEarned, n);
+            Game.cookiesEarned = Math.max(Game.cookiesEarned, Game.cookies);
         }
         Game.CalculateGains?.();
         Game.UpdateMenu?.();
@@ -76,32 +58,24 @@ function apply(big, announce = true) {
         return false;
     }
 
-    if (announce && CF.showNews) {
-        CF.showNews('BIG COOKIES', `SET ${big.sci(14)}`);
-    }
-
+    if (announce) CF.showNews?.('BIG COOKIES', `SET ${big.sci(14)}`);
     return true;
 }
 
 function display() {
     if (!state.virtual) return;
-
     const text = state.virtual.sci(18);
     const spoof = document.getElementById('CF4_SPOOF');
-
-    if (spoof && state.virtual.c !== undefined) {
-        spoof.textContent = text;
-    }
+    if (spoof) spoof.textContent = text;
 
     const native = document.getElementById('cookies');
-    if (native && state.virtual.valueOf() > MAX) {
-        native.style.visibility = 'hidden';
+    if (native) {
+        native.textContent = text;
+        native.style.visibility = 'visible';
     }
 
     const input = document.querySelector('.CF4_INPUT');
-    if (input && document.activeElement !== input) {
-        input.value = text;
-    }
+    if (input && document.activeElement !== input) input.value = text;
 }
 
 function patchCookiesMenu() {
@@ -110,17 +84,15 @@ function patchCookiesMenu() {
 
     let setButton = null;
     for (const button of document.querySelectorAll('button')) {
-        if (button.textContent.trim() === 'SET COOKIES') {
+        if (/^SET COOKIES(?: • BIG)?$/.test(button.textContent.trim())) {
             setButton = button;
             break;
         }
     }
-
     if (!setButton || setButton.dataset.forgeBigPatched === '1') return;
 
     setButton.dataset.forgeBigPatched = '1';
     setButton.textContent = 'SET COOKIES • BIG';
-
     setButton.onclick = () => {
         try {
             const big = parse(input.value);
@@ -136,13 +108,10 @@ function patchCookiesMenu() {
     if (parent && !parent.querySelector('[data-forge-big-help]')) {
         const hint = document.createElement('div');
         hint.dataset.forgeBigHelp = '1';
-        hint.textContent = 'BIG MODE: accepts 1e309, 1e1000, 1e1000000 and beyond.';
+        hint.textContent = 'BIG MODE: 1e309 • 1e1000 • 1e1000000 • beyond.';
         Object.assign(hint.style, {
-            gridColumn: '1 / -1',
-            color: '#72ffcb',
-            font: '8px monospace',
-            opacity: '.8',
-            padding: '5px 2px'
+            gridColumn: '1 / -1', color: '#72ffcb', font: '8px monospace',
+            opacity: '.8', padding: '5px 2px'
         });
         parent.appendChild(hint);
     }
@@ -150,37 +119,28 @@ function patchCookiesMenu() {
 
 readSaved();
 
-/* Replace Forge's Number-only adapter with the Big bridge. */
-const originalSet = CF.game.setCookies;
+CF.game = CF.game || {};
 CF.game.setCookies = amount => {
-    try {
-        const big = parse(amount);
-        return apply(big);
-    } catch {
-        return false;
-    }
+    try { return apply(parse(amount)); }
+    catch (e) { console.error('[Forge Big Cookies]', e); return false; }
 };
-
 CF.game.setBigCookies = CF.game.setCookies;
-CF.game.getBigCookies = () => state.virtual?.clone() || Big.d(Game.cookies || 0);
-CF.game.getBigCookiesExact = () =>
-    (state.virtual || Big.d(Game.cookies || 0)).toString();
+CF.game.getBigCookies = () => state.virtual?.clone() || Big.d(String(Game.cookies || 0));
+CF.game.getBigCookiesExact = () => (state.virtual || Big.d(String(Game.cookies || 0))).toString();
 
-/* Also expose a tiny global API for console use. */
 window.ForgeBigCookies = {
-    version: '1.0.0',
+    version: '2.0.0',
     set: value => apply(parse(value)),
-    get: () => state.virtual?.clone() || Big.d(Game.cookies || 0),
-    exact: () => (state.virtual || Big.d(Game.cookies || 0)).toString(),
-    scientific: (sig = 18) => (state.virtual || Big.d(Game.cookies || 0)).sci(sig),
+    get: () => state.virtual?.clone() || Big.d(String(Game.cookies || 0)),
+    exact: () => (state.virtual || Big.d(String(Game.cookies || 0))).toString(),
+    scientific: (sig = 18) => (state.virtual || Big.d(String(Game.cookies || 0))).sci(sig),
     native: () => Game.cookies,
-    limit: 'Cookie Clicker native Number engine is capped at Number.MAX_VALUE; Forge stores the larger exact balance separately.'
+    test: () => Big.test(),
+    limit: 'Forge storage is arbitrary-magnitude; Number is used only at the vanilla game boundary.'
 };
 
-/* Patch the UI whenever the Cookies menu is opened. */
 const observer = new MutationObserver(() => patchCookiesMenu());
 observer.observe(document.body, { childList: true, subtree: true });
-
 CF.cleanup?.push(() => observer.disconnect());
 
 const loop = () => {
@@ -193,10 +153,7 @@ requestAnimationFrame(loop);
 
 CF.features = CF.features || {};
 CF.features.bigCookies = true;
-CF.bigCookies.version = '1.0.0';
-
-console.info('[Forge Big Cookies] READY — Set Cookies now accepts values above 1e+308.');
-if (state.virtual) {
-    console.info('[Forge Big Cookies] Restored:', state.virtual.sci(18));
-}
+CF.bigCookies.version = '2.0.0';
+console.info('[Forge Big Cookies] READY — arbitrary-magnitude Forge storage enabled.');
+if (state.virtual) console.info('[Forge Big Cookies] Restored:', state.virtual.sci(18));
 })();
