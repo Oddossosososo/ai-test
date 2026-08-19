@@ -2,141 +2,136 @@
 'use strict';
 
 /* ============================================================
-   COOKIE FORGE — BIG MOD
-   Expands Cookie Forge to a large/full-workspace layout.
+   FORGE-GUI — BIG MODE MOD 2.0
+   Reliable add-on for Forge.js
 
    API:
-     window.ForgeBig()       -> enable big mode
-     window.ForgeBig(false)  -> normal mode
-     window.ForgeBig.toggle()-> toggle
-     window.forgebig()       -> toggle
+     ForgeBigMode(true/false)
+     ForgeBigMode.toggle()
+     ForgeBigMode.enabled()
+
+   Hotkeys:
+     F8 = toggle Big Mode
    ============================================================ */
 
-const MOD = 'CookieForgeBigMod';
+const KEY = 'CookieForgeBigMode';
+const ROOT_ID = 'CF_BIG_MOD_STYLE';
 
-const boot = () => {
+function start() {
+    const CF = window.CookieForge;
     const win = document.querySelector('#CF4_WINDOW');
     const header = document.querySelector('#CF4_HEADER');
 
-    if (!win || !header) return false;
-    if (win.dataset.cfBigReady === '1') return true;
+    if (!CF || !win || !header) return false;
+    if (window.ForgeBigMode?.__ready) return true;
 
-    win.dataset.cfBigReady = '1';
+    document.querySelector('#CF4_BIG_BTN')?.remove();
+    document.querySelector('#CF_BIG_MOD_STYLE')?.remove();
 
-    const normal = {
-        width: win.style.width,
-        height: win.style.height,
-        borderRadius: win.style.borderRadius
-    };
-
-    const big = {
-        width: '98vw',
-        height: '96vh',
-        borderRadius: '12px'
-    };
+    const style = document.createElement('style');
+    style.id = ROOT_ID;
+    style.textContent = `
+#CF4_WINDOW.cf-big-mode {
+  width:98vw !important;
+  height:96vh !important;
+  max-width:none !important;
+  max-height:none !important;
+  border-radius:12px !important;
+}
+#CF4_WINDOW.cf-big-mode #CF4_WORKSPACE { padding:20px !important; }
+#CF4_BIG_BTN {
+  width:34px;height:30px;margin-left:7px;
+  display:grid;place-items:center;
+  padding:0;border:1px solid rgba(0,234,255,.35);
+  border-radius:8px;background:rgba(0,234,255,.05);
+  color:var(--cf-accent,#00eaff);
+  font:900 16px/1 monospace;cursor:pointer;
+  transition:.14s;
+}
+#CF4_BIG_BTN:hover {
+  transform:translateY(-1px);
+  background:rgba(0,234,255,.13);
+  box-shadow:0 0 15px var(--cf-glow,rgba(0,234,255,.4));
+}
+`;
+    document.head.appendChild(style);
 
     const button = document.createElement('button');
     button.id = 'CF4_BIG_BTN';
     button.type = 'button';
-    button.title = 'Toggle Forge Big Mode';
+    button.title = 'Big Mode (F8)';
     button.textContent = '□';
 
-    Object.assign(button.style, {
-        marginLeft: '6px',
-        width: '34px',
-        height: '30px',
-        border: '1px solid rgba(0,234,255,.5)',
-        borderRadius: '7px',
-        background: 'rgba(0,234,255,.07)',
-        color: '#00eaff',
-        font: '900 17px monospace',
-        lineHeight: '24px',
-        cursor: 'pointer',
-        boxShadow: '0 0 12px rgba(0,234,255,.2)'
-    });
-
-    const controls = header.querySelector('#CF4_MIN_CONTROLS');
-    if (controls) controls.appendChild(button);
-    else header.appendChild(button);
+    const controls = header.querySelector('.FGUI_CONTROLS') || header.querySelector('#CF4_MIN_CONTROLS');
+    (controls || header).appendChild(button);
 
     let enabled = false;
 
     const apply = value => {
-        enabled = !!value;
-
-        win.style.transition = 'width .22s ease, height .22s ease, border-radius .22s ease';
-        win.style.width = enabled ? big.width : normal.width;
-        win.style.height = enabled ? big.height : normal.height;
-        win.style.borderRadius = enabled ? big.borderRadius : normal.borderRadius;
-
+        enabled = Boolean(value);
+        win.classList.toggle('cf-big-mode', enabled);
         button.textContent = enabled ? '❐' : '□';
-        button.title = enabled ? 'Restore Forge Size' : 'Toggle Forge Big Mode';
-
-        try {
-            localStorage.setItem('CookieForgeBig', enabled ? '1' : '0');
-        } catch {}
-
-        window.CookieForge && (window.CookieForge.big = enabled);
+        button.title = enabled ? 'Restore Forge size' : 'Big Mode (F8)';
+        try { localStorage.setItem(KEY, enabled ? '1' : '0'); } catch {}
+        CF.bigMode = enabled;
+        CF.features = CF.features || {};
+        CF.features.bigMode = enabled;
     };
 
     const toggle = () => apply(!enabled);
-
     button.addEventListener('click', e => {
         e.preventDefault();
         e.stopPropagation();
         toggle();
     });
 
-    header.addEventListener('dblclick', toggle);
-
-    const keyHandler = e => {
+    const keydown = e => {
         if (e.key === 'F8') {
             e.preventDefault();
             toggle();
         }
     };
-    document.addEventListener('keydown', keyHandler);
+    document.addEventListener('keydown', keydown);
 
-    window.ForgeBig = value => {
+    const api = function(value) {
         if (typeof value === 'boolean') apply(value);
         else toggle();
         return enabled;
     };
+    api.toggle = toggle;
+    api.enabled = () => enabled;
+    api.__ready = true;
+    window.ForgeBigMode = api;
 
-    window.ForgeBig.toggle = toggle;
-    window.ForgeBig.enabled = () => enabled;
-    window.forgebig = () => toggle();
-
-    try {
-        if (localStorage.getItem('CookieForgeBig') === '1') apply(true);
-    } catch {}
-
-    const oldDestroy = window.CookieForge?.destroy;
-    if (window.CookieForge && !window.CookieForge.__bigMod) {
-        window.CookieForge.__bigMod = true;
-        window.CookieForge.destroy = () => {
-            document.removeEventListener('keydown', keyHandler);
-            button.remove();
-            delete window.ForgeBig;
-            delete window.forgebig;
-            try { oldDestroy?.(); } catch {}
-        };
+    if (window.ForgeBig && CF.big !== window.ForgeBig) {
+        CF.big = window.ForgeBig;
     }
 
-    console.log('[Cookie Forge] Big mod loaded. Press F8 or click □.');
+    try {
+        if (localStorage.getItem(KEY) === '1') apply(true);
+    } catch {}
+
+    const oldDestroy = CF.destroy;
+    if (typeof oldDestroy === 'function' && !oldDestroy.__bigModeWrapped) {
+        const destroy = () => {
+            document.removeEventListener('keydown', keydown);
+            button.remove();
+            style.remove();
+            delete window.ForgeBigMode;
+            try { oldDestroy(); } catch {}
+        };
+        destroy.__bigModeWrapped = true;
+        CF.destroy = destroy;
+    }
+
+    console.log('[Forge-GUI] Big Mode ready — F8 or □ toggles it.');
     return true;
-};
+}
 
-if (!boot()) {
-    const observer = new MutationObserver(() => {
-        if (boot()) observer.disconnect();
-    });
-
-    observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true
-    });
-
-    setTimeout(() => observer.disconnect(), 15000);
+if (!start()) {
+    let tries = 0;
+    const timer = setInterval(() => {
+        if (start() || ++tries >= 200) clearInterval(timer);
+    }, 50);
 }
 })();
