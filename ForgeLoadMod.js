@@ -5,20 +5,12 @@
    FORGE-GUI — MOD LOAD
    One-paste loader for the complete Forge stack.
 
-   Loads in the required order:
-     1. Forge.js
-     2. ForgeBig.js
-     3. ForgeBigMod.js
-     4. ForgeGUI.js
-
-   Run in Cookie Clicker DevTools:
-     fetch('https://raw.githubusercontent.com/Oddossosososo/ai-test/main/ForgeLoadMod.js').then(r=>r.text()).then(eval)
+   Loads in order: Forge.js -> ForgeBig.js -> ForgeBigMod.js -> ForgeGUI.js
    ============================================================ */
 
 const BASE = 'https://raw.githubusercontent.com/Oddossosososo/ai-test/main/';
 const files = ['Forge.js', 'ForgeBig.js', 'ForgeBigMod.js', 'ForgeGUI.js'];
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function loadScript(name) {
     const url = BASE + name + '?v=' + Date.now();
@@ -32,16 +24,16 @@ async function loadScript(name) {
 
     try {
         new Function(code);
-    } catch (e) {
-        throw new Error(`${name}: syntax error — ${e.message}`);
+    } catch (error) {
+        throw new Error(`${name}: syntax error — ${error.message}`);
     }
 
     const script = document.createElement('script');
     script.textContent = code + `\n//# sourceURL=${url}`;
     (document.head || document.documentElement).appendChild(script);
     script.remove();
+    await sleep(100);
 
-    await sleep(80);
     console.log('[Forge-GUI] Loaded:', name, `(${code.length} chars)`);
 }
 
@@ -50,22 +42,23 @@ async function loadScript(name) {
         for (const file of files) await loadScript(file);
 
         if (!window.CookieForge) {
-            throw new Error('Forge.js loaded but CookieForge was not created.');
+            throw new Error('CookieForge was not created by Forge.js.');
         }
-
-        console.log('%c[Forge-GUI] COMPLETE', 'color:#00eaff;font-weight:900;font-size:14px');
-        console.log('[Forge-GUI] Version:', window.CookieForge.version);
-        console.log('[Forge-GUI] Big engine:', !!window.ForgeBig);
-        console.log('[Forge-GUI] Big mode:', !!window.ForgeBigMode);
-        console.log('[Forge-GUI] Minimize: M | Big Mode: F8');
 
         window.ForgeModLoad = {
             ready: true,
             files: [...files],
             version: window.CookieForge.version,
             big: !!window.ForgeBig,
+            bigMode: !!window.ForgeBigMode,
             gui: !!document.querySelector('#FGUI_MINIMIZE')
         };
+
+        console.log('%c[Forge-GUI] COMPLETE', 'color:#00eaff;font-weight:900;font-size:14px');
+        console.log('[Forge-GUI] Version:', window.CookieForge.version);
+        console.log('[Forge-GUI] Big engine:', !!window.ForgeBig);
+        console.log('[Forge-GUI] Big mode:', !!window.ForgeBigMode);
+        console.log('[Forge-GUI] Minimize: M | Big Mode: F8');
     } catch (error) {
         console.error('[Forge-GUI] LOAD FAILED:', error);
         window.ForgeModLoad = { ready: false, error: String(error) };
