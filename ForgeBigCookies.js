@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-/* COOKIE FORGE — BIG COOKIE BRIDGE 2.0 */
+/* COOKIE FORGE — BIG COOKIE BRIDGE 2.1 */
 const CF = window.CookieForge;
 const Big = window.ForgeBig;
 const Game = window.Game;
@@ -13,7 +13,7 @@ if (!CF || !Big || !Game) {
 
 const KEY = 'CookieForgeBigCookies';
 const state = CF.bigCookies = CF.bigCookies || {
-    version: '2.0.0', active: true, virtual: null
+    version: '2.1.0', active: true, virtual: null
 };
 
 function parse(value) {
@@ -120,17 +120,33 @@ function patchCookiesMenu() {
 readSaved();
 
 CF.game = CF.game || {};
+
 CF.game.setCookies = amount => {
     try { return apply(parse(amount)); }
     catch (e) { console.error('[Forge Big Cookies]', e); return false; }
 };
+
+/* Big-number-safe addition: never converts the amount through Number. */
+CF.game.addCookies = amount => {
+    try {
+        const value = parse(amount);
+        const current = state.virtual?.clone() || Big.d(String(Game.cookies || 0));
+        return apply(current.add(value));
+    } catch (e) {
+        console.error('[Forge Big Cookies]', e);
+        return false;
+    }
+};
+
 CF.game.setBigCookies = CF.game.setCookies;
+CF.game.addBigCookies = CF.game.addCookies;
 CF.game.getBigCookies = () => state.virtual?.clone() || Big.d(String(Game.cookies || 0));
 CF.game.getBigCookiesExact = () => (state.virtual || Big.d(String(Game.cookies || 0))).toString();
 
 window.ForgeBigCookies = {
-    version: '2.0.0',
-    set: value => apply(parse(value)),
+    version: '2.1.0',
+    set: value => { try { return apply(parse(value)); } catch (e) { console.error('[Forge Big Cookies]', e); return false; } },
+    add: value => { try { return apply((state.virtual?.clone() || Big.d(String(Game.cookies || 0))).add(parse(value))); } catch (e) { console.error('[Forge Big Cookies]', e); return false; } },
     get: () => state.virtual?.clone() || Big.d(String(Game.cookies || 0)),
     exact: () => (state.virtual || Big.d(String(Game.cookies || 0))).toString(),
     scientific: (sig = 18) => (state.virtual || Big.d(String(Game.cookies || 0))).sci(sig),
@@ -153,7 +169,7 @@ requestAnimationFrame(loop);
 
 CF.features = CF.features || {};
 CF.features.bigCookies = true;
-CF.bigCookies.version = '2.0.0';
+CF.bigCookies.version = '2.1.0';
 console.info('[Forge Big Cookies] READY — arbitrary-magnitude Forge storage enabled.');
 if (state.virtual) console.info('[Forge Big Cookies] Restored:', state.virtual.sci(18));
 })();
