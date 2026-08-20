@@ -169,7 +169,6 @@
             );
         }
 
-        /* Compatibility alias used by the Forge cookie bridges. */
         sci(significant = 12) {
             return this.scientific(significant);
         }
@@ -274,7 +273,7 @@
                 oneE309: a.scientific(),
                 oneEMillion: b.scientific(),
                 doubled: c.scientific(),
-                nativeLimit: Number.MAX_VALUE
+                nativeLimit: 'BigDecimal/BigInt magnitude (not Number.MAX_VALUE)'
             };
         },
 
