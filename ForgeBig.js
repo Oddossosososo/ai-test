@@ -169,6 +169,11 @@
             );
         }
 
+        /* Compatibility alias used by the Forge cookie bridges. */
+        sci(significant = 12) {
+            return this.scientific(significant);
+        }
+
         nativeValue() {
             const exponent = this.e + BigInt(this.c.toString().length - 1);
 
@@ -221,7 +226,7 @@
     }
 
     const ForgeBig = {
-        version: '6.0.0',
+        version: '6.0.1',
         engine: 'BigInt coefficient + BigInt exponent',
         Decimal: BigDecimal,
         booted: false,
@@ -278,11 +283,6 @@
         }
     };
 
-    /* ------------------------------------------------------------
-       CRITICAL: expose + boot IMMEDIATELY.
-       Do not wait for Game.LoadMod's mod callback.
-       ------------------------------------------------------------ */
-
     window.ForgeBig = ForgeBig;
 
     function boot() {
@@ -313,10 +313,8 @@
         }
     }
 
-    /* Boot now. */
     boot();
 
-    /* Also register with Cookie Clicker for proper mod awareness. */
     if (
         typeof Game !== 'undefined' &&
         typeof Game.registerMod === 'function'
