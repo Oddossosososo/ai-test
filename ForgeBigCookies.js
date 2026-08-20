@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-/* COOKIE FORGE — BIG COOKIE BRIDGE 2.2 */
+/* COOKIE FORGE — BIG COOKIE BRIDGE 2.3 */
 const CF = window.CookieForge;
 const Big = window.ForgeBig;
 const Game = window.Game;
@@ -12,14 +12,8 @@ if (!CF || !Big || !Game) {
 }
 
 const KEY = 'CookieForgeBigCookies';
-
-// Keep the big-cookie balance separate from CF.bigCookies, which is also
-// used by ForgeBigMod. Mixing the two caused the bridge to treat a string
-// balance as its state object and break on huge values.
 const bigState = CF.__bigCookieState = CF.__bigCookieState || {
-    version: '2.2.0',
-    active: true,
-    virtual: null
+    version: '2.3.0', active: true, virtual: null
 };
 
 function parse(value) {
@@ -30,9 +24,7 @@ function parse(value) {
 }
 
 function save(value) {
-    try {
-        localStorage.setItem(KEY, value.sci(24));
-    } catch {}
+    try { localStorage.setItem(KEY, value.sci(24)); } catch {}
 }
 
 function readSaved() {
@@ -42,7 +34,6 @@ function readSaved() {
     } catch {}
 }
 
-/* ONLY this function crosses into Cookie Clicker's Number-based engine. */
 function nativeValue(big) {
     const n = Big.native ? Big.native(big) : big.nativeValue();
     if (!Number.isFinite(n)) return Number.MAX_VALUE;
@@ -52,17 +43,11 @@ function nativeValue(big) {
 function apply(big, announce = true) {
     bigState.virtual = big.clone();
     save(bigState.virtual);
-
     try {
         Game.cookies = nativeValue(big);
-
         if (typeof Game.cookiesEarned === 'number') {
-            Game.cookiesEarned = Math.max(
-                Game.cookiesEarned,
-                Game.cookies
-            );
+            Game.cookiesEarned = Math.max(Game.cookiesEarned, Game.cookies);
         }
-
         Game.CalculateGains?.();
         Game.UpdateMenu?.();
         Game.Draw?.();
@@ -70,40 +55,63 @@ function apply(big, announce = true) {
         console.error('[Forge Big Cookies] Native bridge error:', e);
         return false;
     }
-
-    if (announce) {
-        CF.showNews?.(
-            'BIG COOKIES',
-            `SET ${big.sci(14)}`
-        );
-    }
-
+    if (announce) CF.showNews?.('BIG COOKIES', `SET ${big.sci(14)}`);
     return true;
 }
 
-function display() {
-    if (!bigState.virtual) return;
-
-    const text = bigState.virtual.sci(18);
-    const spoof = document.getElementById('CF4_SPOOF');
-
-    if (spoof) spoof.textContent = text;
-
+/* ---------- Forge display layer ---------- */
+function hideNativeCookieCounter() {
     const native = document.getElementById('cookies');
-
     if (native) {
-        native.textContent = text;
-        native.style.visibility = 'visible';
+        native.style.visibility = 'hidden';
+        native.style.pointerEvents = 'none';
     }
+}
 
-    const input = document.querySelector('.CF4_INPUT');
-
-    if (
-        input &&
-        document.activeElement !== input
-    ) {
-        input.value = text;
+function showForgeCookieCounter(text) {
+    const spoof = document.getElementById('CF4_SPOOF');
+    if (spoof) {
+        spoof.textContent = text;
+        spoof.style.visibility = 'visible';
     }
+}
+
+/* Stop Cookie Clicker's normal cookie number from flashing over Forge UI. */
+function suppressCookieOverlay() {
+    hideNativeCookieCounter();
+    const counter = document.getElementById('cookies');
+    if (counter) counter.style.display = 'none';
+}
+
+/* ---------- Shopping/title mode ---------- */
+function setShoppingTitle() {
+    document.title = 'Cookie Forge — Shopping Mode';
+}
+
+function restoreTitle() {
+    document.title = 'Cookie Clicker';
+}
+
+function patchShopping() {
+    for (const el of document.querySelectorAll('.product, .crate, .productBox')) {
+        if (el.dataset.forgeShoppingPatched === '1') continue;
+        el.dataset.forgeShoppingPatched = '1';
+        el.addEventListener('mouseenter', setShoppingTitle, { passive: true });
+        el.addEventListener('mouseleave', setShoppingTitle, { passive: true });
+    }
+}
+
+/* ---------- Third-party achievement ---------- */
+function grantThirdParty() {
+    try {
+        if (typeof Game.Win === 'function') {
+            Game.Win('Third-party');
+            return true;
+        }
+    } catch (e) {
+        console.warn('[Cookie Forge] Could not grant Third-party:', e);
+    }
+    return false;
 }
 
 function patchCookiesMenu() {
@@ -111,185 +119,88 @@ function patchCookiesMenu() {
     if (!input) return;
 
     let setButton = null;
-
     for (const button of document.querySelectorAll('button')) {
-        if (
-            /^SET COOKIES(?: • BIG)?$/.test(
-                button.textContent.trim()
-            )
-        ) {
+        if (/^SET COOKIES(?: • BIG)?$/.test(button.textContent.trim())) {
             setButton = button;
             break;
         }
     }
-
-    if (
-        !setButton ||
-        setButton.dataset.forgeBigPatched === '1'
-    ) return;
+    if (!setButton || setButton.dataset.forgeBigPatched === '1') return;
 
     setButton.dataset.forgeBigPatched = '1';
     setButton.textContent = 'SET COOKIES • BIG';
-
     setButton.onclick = () => {
         try {
-            // input.value is deliberately kept as a string so 1e309
-            // never becomes Infinity before ForgeBig parses it.
             const big = parse(input.value);
             apply(big);
             input.value = big.sci(18);
         } catch (e) {
-            CF.showNews?.(
-                'BIG COOKIES',
-                'INVALID BIG NUMBER'
-            );
+            CF.showNews?.('BIG COOKIES', 'INVALID BIG NUMBER');
             console.error('[Forge Big Cookies]', e);
         }
     };
-
-    const parent = setButton.parentElement;
-
-    if (
-        parent &&
-        !parent.querySelector('[data-forge-big-help]')
-    ) {
-        const hint = document.createElement('div');
-        hint.dataset.forgeBigHelp = '1';
-        hint.textContent =
-            'BIG MODE: 1e309 • 1e1000 • 1e1000000 • beyond.';
-
-        Object.assign(hint.style, {
-            gridColumn: '1 / -1',
-            color: '#72ffcb',
-            font: '8px monospace',
-            opacity: '.8',
-            padding: '5px 2px'
-        });
-
-        parent.appendChild(hint);
-    }
 }
 
 readSaved();
-
 CF.game = CF.game || {};
-
 CF.game.setCookies = amount => {
-    try {
-        return apply(parse(amount));
-    } catch (e) {
-        console.error('[Forge Big Cookies]', e);
-        return false;
-    }
+    try { return apply(parse(amount)); }
+    catch (e) { console.error('[Forge Big Cookies]', e); return false; }
 };
-
-/* Big-number-safe addition: never converts the amount through Number. */
 CF.game.addCookies = amount => {
     try {
         const value = parse(amount);
-        const current =
-            bigState.virtual?.clone() ||
-            Big.d(String(Game.cookies || 0));
-
+        const current = bigState.virtual?.clone() || Big.d(String(Game.cookies || 0));
         return apply(current.add(value));
     } catch (e) {
         console.error('[Forge Big Cookies]', e);
         return false;
     }
 };
-
 CF.game.setBigCookies = CF.game.setCookies;
 CF.game.addBigCookies = CF.game.addCookies;
-
-CF.game.getBigCookies = () =>
-    bigState.virtual?.clone() ||
-    Big.d(String(Game.cookies || 0));
-
-CF.game.getBigCookiesExact = () =>
-    (
-        bigState.virtual ||
-        Big.d(String(Game.cookies || 0))
-    ).toString();
+CF.game.getBigCookies = () => bigState.virtual?.clone() || Big.d(String(Game.cookies || 0));
+CF.game.getBigCookiesExact = () => (bigState.virtual || Big.d(String(Game.cookies || 0))).toString();
 
 window.ForgeBigCookies = {
-    version: '2.2.0',
-
-    set: value => {
-        try {
-            return apply(parse(value));
-        } catch (e) {
-            console.error('[Forge Big Cookies]', e);
-            return false;
-        }
-    },
-
-    add: value => {
-        try {
-            const current =
-                bigState.virtual?.clone() ||
-                Big.d(String(Game.cookies || 0));
-
-            return apply(current.add(parse(value)));
-        } catch (e) {
-            console.error('[Forge Big Cookies]', e);
-            return false;
-        }
-    },
-
-    get: () =>
-        bigState.virtual?.clone() ||
-        Big.d(String(Game.cookies || 0)),
-
-    exact: () =>
-        (
-            bigState.virtual ||
-            Big.d(String(Game.cookies || 0))
-        ).toString(),
-
-    scientific: (sig = 18) =>
-        (
-            bigState.virtual ||
-            Big.d(String(Game.cookies || 0))
-        ).sci(sig),
-
+    version: '2.3.0',
+    set: value => { try { return apply(parse(value)); } catch (e) { console.error('[Forge Big Cookies]', e); return false; } },
+    add: value => { try { return apply((bigState.virtual?.clone() || Big.d(String(Game.cookies || 0))).add(parse(value))); } catch (e) { console.error('[Forge Big Cookies]', e); return false; } },
+    get: () => bigState.virtual?.clone() || Big.d(String(Game.cookies || 0)),
+    exact: () => (bigState.virtual || Big.d(String(Game.cookies || 0))).toString(),
+    scientific: (sig = 18) => (bigState.virtual || Big.d(String(Game.cookies || 0))).sci(sig),
     native: () => Game.cookies,
     test: () => Big.test(),
-    limit:
-        'Forge storage is arbitrary-magnitude; Number is used only at the vanilla game boundary.'
+    shopping: () => setShoppingTitle(),
+    restoreTitle: () => restoreTitle(),
+    hideNativeCounter: () => suppressCookieOverlay(),
+    limit: 'Forge storage is arbitrary-magnitude; Number is used only at the vanilla game boundary.'
 };
 
-const observer =
-    new MutationObserver(() => patchCookiesMenu());
-
-observer.observe(document.body, {
-    childList: true,
-    subtree: true
+const observer = new MutationObserver(() => {
+    patchCookiesMenu();
+    patchShopping();
+    suppressCookieOverlay();
 });
-
+observer.observe(document.body, { childList: true, subtree: true });
 CF.cleanup?.push(() => observer.disconnect());
 
 const loop = () => {
     if (!CF.running) return;
-
     patchCookiesMenu();
-    display();
+    patchShopping();
+    suppressCookieOverlay();
+    if (bigState.virtual) showForgeCookieCounter(bigState.virtual.sci(18));
     requestAnimationFrame(loop);
 };
-
 requestAnimationFrame(loop);
 
 CF.features = CF.features || {};
 CF.features.bigCookies = true;
-CF.__bigCookieState.version = '2.2.0';
+bigState.version = '2.3.0';
+setShoppingTitle();
+grantThirdParty();
 
-console.info(
-    '[Forge Big Cookies] READY — arbitrary-magnitude Forge storage enabled.'
-);
-
-if (bigState.virtual) {
-    console.info(
-        '[Forge Big Cookies] Restored:',
-        bigState.virtual.sci(18)
-    );
-}
+console.info('[Forge Big Cookies] READY 2.3 — counter hidden, shopping mode active, Third-party achievement requested.');
+if (bigState.virtual) console.info('[Forge Big Cookies] Restored:', bigState.virtual.sci(18));
 })();
