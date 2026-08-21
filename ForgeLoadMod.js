@@ -8,6 +8,7 @@
    Loads in order:
    Forge.js -> ForgeBig.js -> ForgeBigMod.js -> ForgeGUI.js
    -> ForgeBigCookies.js -> ForgeBigBridge.js
+   -> ForgeSpoofPositionMod.js
    ============================================================ */
 
 const BASE = 'https://raw.githubusercontent.com/Oddossosososo/ai-test/main/';
@@ -17,7 +18,8 @@ const files = [
     'ForgeBigMod.js',
     'ForgeGUI.js',
     'ForgeBigCookies.js',
-    'ForgeBigBridge.js'
+    'ForgeBigBridge.js',
+    'ForgeSpoofPositionMod.js'
 ];
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -63,15 +65,16 @@ async function loadScript(name) {
             bigMode: !!window.ForgeBigMode,
             bigCookies: !!window.ForgeBigCookies,
             bigBridge: !!window.CookieForge.game?.__forgeBigBridgeInstalled,
-            gui: !!document.querySelector('#FGUI_MINIMIZE')
+            gui: !!document.querySelector('#FGUI_MINIMIZE'),
+            spoofPosition: !!window.CookieForgeSpoofPosition
         };
 
-        console.log('%c[COOKIE FORGE] LATEST VERSION — ARCHIVED: v' + window.CookieForge.version, 'color:#00eaff;font-weight:900;font-size:14px');
         console.log('[Forge-GUI] COMPLETE');
         console.log('[Forge-GUI] Big engine:', !!window.ForgeBig);
         console.log('[Forge-GUI] Big mode:', !!window.ForgeBigMode);
         console.log('[Forge-GUI] Big cookies:', !!window.ForgeBigCookies);
         console.log('[Forge-GUI] Big bridge:', !!window.CookieForge.game?.__forgeBigBridgeInstalled);
+        console.log('[Forge-GUI] Spoofer position:', !!window.CookieForgeSpoofPosition);
         console.log('[Forge-GUI] Minimize: M | Big Mode: F8');
         console.log('[Forge-GUI] Set Cookies accepts arbitrary-magnitude scientific values.');
     } catch (error) {
