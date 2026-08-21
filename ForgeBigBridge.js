@@ -50,11 +50,38 @@ function install() {
         }
     };
 
+    CF.game.testBigCookieInputs = () => {
+        const inputs = ['1e308', '1e309', '1e1000', '1e1000000'];
+        const results = inputs.map(input => {
+            try {
+                const value = Big.d(input);
+                return {
+                    input,
+                    accepted: true,
+                    normalized: value.sci(18),
+                    fitsNative: value.fitsNative()
+                };
+            } catch (error) {
+                return {
+                    input,
+                    accepted: false,
+                    error: String(error)
+                };
+            }
+        });
+
+        return {
+            ok: results.every(result => result.accepted),
+            results
+        };
+    };
+
     CF.game.__forgeBigBridgeInstalled = true;
     CF.features = CF.features || {};
     CF.features.arbitraryMagnitudeCookies = true;
 
     console.info('[Cookie Forge] Set Cookies bridge installed — ForgeBigMode active.');
+    console.info('[Cookie Forge] Dry-run tests:', CF.game.testBigCookieInputs());
     return true;
 }
 
