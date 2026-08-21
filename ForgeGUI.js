@@ -3,8 +3,8 @@
 
 /* ============================================================
    FORGE-GUI — UI ENHANCEMENT LAYER
-   Adds title branding, minimize/restore, polish and hotkeys.
-   Safe to load after Forge.js.
+   Adds title branding, minimize/restore, cookie-counter positioning
+   and hotkeys. Safe to load after Forge.js.
    ============================================================ */
 
 const START = () => {
@@ -69,6 +69,20 @@ const START = () => {
     border-radius:2px;
     background:currentColor;
 }
+
+/* ---------- FORGE COOKIE COUNTER ---------- */
+#CF4_SPOOF {
+    position:fixed !important;
+    top:18px !important;
+    left:50% !important;
+    right:auto !important;
+    bottom:auto !important;
+    transform:translateX(-50%) !important;
+    z-index:2147483645 !important;
+    pointer-events:none !important;
+    margin:0 !important;
+}
+
 #FORGE_GUI_RESTORE {
     position:fixed;
     right:18px;
@@ -94,25 +108,11 @@ const START = () => {
     to { opacity:1; transform:none; }
 }
 #FORGE_GUI_RESTORE b { color:var(--cf-accent,#00eaff); }
-#FGUI_LATEST_ARCHIVED {
-    display:inline-flex;
-    align-items:center;
-    margin-left:12px;
-    padding:5px 8px;
-    border:1px solid rgba(114,255,203,.5);
-    border-radius:7px;
-    background:rgba(114,255,203,.07);
-    color:#72ffcb;
-    font:900 8px/1 monospace;
-    letter-spacing:1px;
-    white-space:nowrap;
-    box-shadow:0 0 12px rgba(114,255,203,.12);
-}
 @media (max-width:600px) {
     #CF4_WINDOW { width:96vw !important; height:90vh !important; }
     #CF4_NAV { width:155px !important; }
     .CF4_TITLE { font-size:15px !important; letter-spacing:2px !important; }
-    #FGUI_LATEST_ARCHIVED { font-size:7px; padding:4px 6px; margin-left:7px; }
+    #CF4_SPOOF { top:10px !important; font-size:12px !important; max-width:94vw; text-align:center; }
 }
 `;
     root.appendChild(style);
@@ -124,15 +124,8 @@ const START = () => {
     const sub = header.querySelector('.CF4_SUB');
     if (sub) sub.textContent = 'HOLOGRAPHIC CONTROL SYSTEM';
 
-    /* ---------- LATEST ARCHIVED VERSION ---------- */
-    const latest = document.createElement('div');
-    latest.id = 'FGUI_LATEST_ARCHIVED';
-    latest.textContent = `LATEST VERSION — ARCHIVED • v${window.CookieForge?.version || 'unknown'}`;
-    latest.title = 'This is the archived Forge release version loaded in this page.';
-
-    const brand = header.querySelector('.CF4_BRAND');
-    if (brand) brand.appendChild(latest);
-    else header.appendChild(latest);
+    /* Remove any older archived-version badge from previous ForgeGUI builds. */
+    document.querySelectorAll('#FGUI_LATEST_ARCHIVED').forEach(el => el.remove());
 
     /* ---------- CONTROLS ---------- */
     const controls = document.createElement('div');
@@ -195,7 +188,7 @@ const START = () => {
         if (localStorage.getItem('ForgeGUI_Minimized') === '1') setMinimized(true);
     } catch {}
 
-    console.log('[Forge-GUI] UI enhancement loaded. Press M to minimize/restore.');
+    console.log('[Forge-GUI] UI enhancement loaded. Cookie counter repositioned. Press M to minimize/restore.');
     return true;
 };
 
