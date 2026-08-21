@@ -66,8 +66,8 @@ async function loadScript(name) {
             gui: !!document.querySelector('#FGUI_MINIMIZE')
         };
 
-        console.log('%c[Forge-GUI] COMPLETE', 'color:#00eaff;font-weight:900;font-size:14px');
-        console.log('[Forge-GUI] Version:', window.CookieForge.version);
+        console.log('%c[COOKIE FORGE] LATEST VERSION — ARCHIVED: v' + window.CookieForge.version, 'color:#00eaff;font-weight:900;font-size:14px');
+        console.log('[Forge-GUI] COMPLETE');
         console.log('[Forge-GUI] Big engine:', !!window.ForgeBig);
         console.log('[Forge-GUI] Big mode:', !!window.ForgeBigMode);
         console.log('[Forge-GUI] Big cookies:', !!window.ForgeBigCookies);
