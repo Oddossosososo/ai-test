@@ -7,7 +7,7 @@
 
    Loads in order:
    Forge.js -> ForgeBig.js -> ForgeBigMod.js -> ForgeGUI.js
-   -> ForgeBigCookies.js
+   -> ForgeBigCookies.js -> ForgeBigBridge.js
    ============================================================ */
 
 const BASE = 'https://raw.githubusercontent.com/Oddossosososo/ai-test/main/';
@@ -16,7 +16,8 @@ const files = [
     'ForgeBig.js',
     'ForgeBigMod.js',
     'ForgeGUI.js',
-    'ForgeBigCookies.js'
+    'ForgeBigCookies.js',
+    'ForgeBigBridge.js'
 ];
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -61,6 +62,7 @@ async function loadScript(name) {
             big: !!window.ForgeBig,
             bigMode: !!window.ForgeBigMode,
             bigCookies: !!window.ForgeBigCookies,
+            bigBridge: !!window.CookieForge.game?.__forgeBigBridgeInstalled,
             gui: !!document.querySelector('#FGUI_MINIMIZE')
         };
 
@@ -69,8 +71,9 @@ async function loadScript(name) {
         console.log('[Forge-GUI] Big engine:', !!window.ForgeBig);
         console.log('[Forge-GUI] Big mode:', !!window.ForgeBigMode);
         console.log('[Forge-GUI] Big cookies:', !!window.ForgeBigCookies);
+        console.log('[Forge-GUI] Big bridge:', !!window.CookieForge.game?.__forgeBigBridgeInstalled);
         console.log('[Forge-GUI] Minimize: M | Big Mode: F8');
-        console.log('[Forge-GUI] Set Cookies now accepts 1e309+ values.');
+        console.log('[Forge-GUI] Set Cookies accepts arbitrary-magnitude scientific values.');
     } catch (error) {
         console.error('[Forge-GUI] LOAD FAILED:', error);
         window.ForgeModLoad = { ready: false, error: String(error) };
