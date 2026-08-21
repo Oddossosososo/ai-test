@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-/* COOKIE FORGE — BIG COOKIE BRIDGE 2.3 */
+/* COOKIE FORGE — BIG COOKIE BRIDGE 2.4 */
 const CF = window.CookieForge;
 const Big = window.ForgeBig;
 const Game = window.Game;
@@ -13,13 +13,57 @@ if (!CF || !Big || !Game) {
 
 const KEY = 'CookieForgeBigCookies';
 const bigState = CF.__bigCookieState = CF.__bigCookieState || {
-    version: '2.3.0', active: true, virtual: null
+    version: '2.4.0', active: true, virtual: null
 };
+
+/*
+   Exact scientific-notation -> BigInt conversion.
+   This deliberately receives a STRING so JavaScript cannot turn 1e309
+   into Infinity before we process it.
+*/
+function scientificToBigInt(scientificStr) {
+    const text = String(scientificStr)
+        .trim()
+        .replace(/,/g, '')
+        .toLowerCase();
+
+    const match = text.match(/^([+-]?\d*(?:\.\d*)?)e([+-]?\d+)$/);
+    if (!match) throw new Error('Invalid scientific notation format');
+
+    let [, base, exponentStr] = match;
+    let exponent = parseInt(exponentStr, 10);
+
+    if (exponent < 0) {
+        throw new Error('BigInt cannot represent a negative-exponent decimal');
+    }
+
+    let [whole, decimal = ''] = base.split('.');
+    whole = whole || '0';
+
+    exponent -= decimal.length;
+    if (exponent < 0) {
+        throw new Error('Result contains a fractional part');
+    }
+
+    const digits = (whole + decimal).replace(/^0+(?=\d)/, '') || '0';
+    const sign = digits === '0' ? 1n : (whole.startsWith('-') ? -1n : 1n);
+
+    return sign * BigInt(digits) * (10n ** BigInt(exponent));
+}
 
 function parse(value) {
     if (value instanceof Big.Decimal) return value.clone();
+
     const text = String(value ?? '').trim().replace(/,/g, '');
     if (!text) throw new TypeError('Empty cookie amount');
+
+    /* Keep huge scientific values as strings. Never Number(text). */
+    if (/^[+-]?\d*(?:\.\d*)?e[+-]?\d+$/i.test(text)) {
+        try {
+            return Big.d(scientificToBigInt(text));
+        } catch {}
+    }
+
     return Big.d(text);
 }
 
@@ -43,7 +87,10 @@ function nativeValue(big) {
 function apply(big, announce = true) {
     bigState.virtual = big.clone();
     save(bigState.virtual);
+
     try {
+        /* Vanilla Cookie Clicker is still Number-based, so only the
+           compatibility boundary is capped. Forge keeps the exact value. */
         Game.cookies = nativeValue(big);
         if (typeof Game.cookiesEarned === 'number') {
             Game.cookiesEarned = Math.max(Game.cookiesEarned, Game.cookies);
@@ -55,11 +102,11 @@ function apply(big, announce = true) {
         console.error('[Forge Big Cookies] Native bridge error:', e);
         return false;
     }
+
     if (announce) CF.showNews?.('BIG COOKIES', `SET ${big.sci(14)}`);
     return true;
 }
 
-/* ---------- Forge display layer ---------- */
 function hideNativeCookieCounter() {
     const native = document.getElementById('cookies');
     if (native) {
@@ -76,14 +123,12 @@ function showForgeCookieCounter(text) {
     }
 }
 
-/* Stop Cookie Clicker's normal cookie number from flashing over Forge UI. */
 function suppressCookieOverlay() {
     hideNativeCookieCounter();
     const counter = document.getElementById('cookies');
     if (counter) counter.style.display = 'none';
 }
 
-/* ---------- Shopping/title mode ---------- */
 function setShoppingTitle() {
     document.title = 'Cookie Forge — Shopping Mode';
 }
@@ -101,7 +146,6 @@ function patchShopping() {
     }
 }
 
-/* ---------- Third-party achievement ---------- */
 function grantThirdParty() {
     try {
         if (typeof Game.Win === 'function') {
@@ -162,13 +206,16 @@ CF.game.addBigCookies = CF.game.addCookies;
 CF.game.getBigCookies = () => bigState.virtual?.clone() || Big.d(String(Game.cookies || 0));
 CF.game.getBigCookiesExact = () => (bigState.virtual || Big.d(String(Game.cookies || 0))).toString();
 
+window.scientificToBigInt = scientificToBigInt;
+
 window.ForgeBigCookies = {
-    version: '2.3.0',
+    version: '2.4.0',
     set: value => { try { return apply(parse(value)); } catch (e) { console.error('[Forge Big Cookies]', e); return false; } },
     add: value => { try { return apply((bigState.virtual?.clone() || Big.d(String(Game.cookies || 0))).add(parse(value))); } catch (e) { console.error('[Forge Big Cookies]', e); return false; } },
     get: () => bigState.virtual?.clone() || Big.d(String(Game.cookies || 0)),
     exact: () => (bigState.virtual || Big.d(String(Game.cookies || 0))).toString(),
     scientific: (sig = 18) => (bigState.virtual || Big.d(String(Game.cookies || 0))).sci(sig),
+    scientificToBigInt,
     native: () => Game.cookies,
     test: () => Big.test(),
     shopping: () => setShoppingTitle(),
@@ -197,10 +244,11 @@ requestAnimationFrame(loop);
 
 CF.features = CF.features || {};
 CF.features.bigCookies = true;
-bigState.version = '2.3.0';
+CF.features.exactScientificInput = true;
+bigState.version = '2.4.0';
 setShoppingTitle();
 grantThirdParty();
 
-console.info('[Forge Big Cookies] READY 2.3 — counter hidden, shopping mode active, Third-party achievement requested.');
+console.info('[Forge Big Cookies] READY 2.4 — exact scientific input, counter hidden, shopping mode active, Third-party achievement requested.');
 if (bigState.virtual) console.info('[Forge Big Cookies] Restored:', bigState.virtual.sci(18));
 })();
