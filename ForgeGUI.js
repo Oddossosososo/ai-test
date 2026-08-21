@@ -94,10 +94,25 @@ const START = () => {
     to { opacity:1; transform:none; }
 }
 #FORGE_GUI_RESTORE b { color:var(--cf-accent,#00eaff); }
+#FGUI_LATEST_ARCHIVED {
+    display:inline-flex;
+    align-items:center;
+    margin-left:12px;
+    padding:5px 8px;
+    border:1px solid rgba(114,255,203,.5);
+    border-radius:7px;
+    background:rgba(114,255,203,.07);
+    color:#72ffcb;
+    font:900 8px/1 monospace;
+    letter-spacing:1px;
+    white-space:nowrap;
+    box-shadow:0 0 12px rgba(114,255,203,.12);
+}
 @media (max-width:600px) {
     #CF4_WINDOW { width:96vw !important; height:90vh !important; }
     #CF4_NAV { width:155px !important; }
     .CF4_TITLE { font-size:15px !important; letter-spacing:2px !important; }
+    #FGUI_LATEST_ARCHIVED { font-size:7px; padding:4px 6px; margin-left:7px; }
 }
 `;
     root.appendChild(style);
@@ -108,6 +123,16 @@ const START = () => {
 
     const sub = header.querySelector('.CF4_SUB');
     if (sub) sub.textContent = 'HOLOGRAPHIC CONTROL SYSTEM';
+
+    /* ---------- LATEST ARCHIVED VERSION ---------- */
+    const latest = document.createElement('div');
+    latest.id = 'FGUI_LATEST_ARCHIVED';
+    latest.textContent = `LATEST VERSION — ARCHIVED • v${window.CookieForge?.version || 'unknown'}`;
+    latest.title = 'This is the archived Forge release version loaded in this page.';
+
+    const brand = header.querySelector('.CF4_BRAND');
+    if (brand) brand.appendChild(latest);
+    else header.appendChild(latest);
 
     /* ---------- CONTROLS ---------- */
     const controls = document.createElement('div');
@@ -157,6 +182,7 @@ const START = () => {
         const wrapped = () => {
             document.querySelector('#FORGE_GUI_STYLE')?.remove();
             document.querySelector('#FORGE_GUI_RESTORE')?.remove();
+            document.querySelector('#FGUI_LATEST_ARCHIVED')?.remove();
             document.removeEventListener('keydown', keydown);
             oldDestroy();
         };
