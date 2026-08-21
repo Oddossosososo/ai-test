@@ -16,11 +16,8 @@ const bigState = CF.__bigCookieState = CF.__bigCookieState || {
     version: '2.4.0', active: true, virtual: null
 };
 
-/*
-   Exact scientific-notation -> BigInt conversion.
-   This deliberately receives a STRING so JavaScript cannot turn 1e309
-   into Infinity before we process it.
-*/
+/* Exact scientific-notation -> BigInt conversion.
+   Input MUST stay a string so JavaScript never converts 1e309 to Infinity. */
 function scientificToBigInt(scientificStr) {
     const text = String(scientificStr)
         .trim()
@@ -30,14 +27,16 @@ function scientificToBigInt(scientificStr) {
     const match = text.match(/^([+-]?\d*(?:\.\d*)?)e([+-]?\d+)$/);
     if (!match) throw new Error('Invalid scientific notation format');
 
-    let [, base, exponentStr] = match;
-    let exponent = parseInt(exponentStr, 10);
+    const base = match[1];
+    let exponent = parseInt(match[2], 10);
 
     if (exponent < 0) {
         throw new Error('BigInt cannot represent a negative-exponent decimal');
     }
 
-    let [whole, decimal = ''] = base.split('.');
+    const negative = base.startsWith('-');
+    const unsignedBase = base.replace(/^[+-]/, '');
+    let [whole, decimal = ''] = unsignedBase.split('.');
     whole = whole || '0';
 
     exponent -= decimal.length;
@@ -46,9 +45,8 @@ function scientificToBigInt(scientificStr) {
     }
 
     const digits = (whole + decimal).replace(/^0+(?=\d)/, '') || '0';
-    const sign = digits === '0' ? 1n : (whole.startsWith('-') ? -1n : 1n);
-
-    return sign * BigInt(digits) * (10n ** BigInt(exponent));
+    const magnitude = BigInt(digits) * (10n ** BigInt(exponent));
+    return negative ? -magnitude : magnitude;
 }
 
 function parse(value) {
@@ -89,8 +87,8 @@ function apply(big, announce = true) {
     save(bigState.virtual);
 
     try {
-        /* Vanilla Cookie Clicker is still Number-based, so only the
-           compatibility boundary is capped. Forge keeps the exact value. */
+        /* Vanilla Cookie Clicker remains Number-based at this boundary.
+           Forge's stored/displayed value remains exact and arbitrary-size. */
         Game.cookies = nativeValue(big);
         if (typeof Game.cookiesEarned === 'number') {
             Game.cookiesEarned = Math.max(Game.cookiesEarned, Game.cookies);
